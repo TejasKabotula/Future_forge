@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+*.env
+**/.env*
+keys.env
+!*.env.example
+
+# Production
+dist/
+dist-ssr/
+build/
+out.txt
+
+# Debug/Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+logs/
+
+# Testing Debris
+backend/test_audio.mp4
+backend/temp_*
+backend/temp_subs_*
+
+# Editor/OS
+.vscode/
+.idea/
+.DS_Store
+*.suo
+*.sln
+*.sw?
+
+# Binaries
+bin/yt-dlp.exe
+bin/ffmpeg.exe
+bin/ffprobe.exe
