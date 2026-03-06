@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import logo from '../assets/favicon.png';
 
 const Register = () => {
     const [username, setUsername] = useState('');
@@ -25,6 +26,10 @@ const Register = () => {
         <div className="min-h-screen bg-background flex items-center justify-center p-4">
             <div className="w-full max-w-md bg-surface p-8 rounded-2xl border border-white/5 shadow-2xl animate-fade-in">
                 <div className="text-center mb-8">
+                    <div className="flex items-center justify-center gap-3 mb-6">
+                        <img src={logo} alt="Future Forge Logo" className="w-14 h-14 object-contain drop-shadow-[0_0_15px_rgba(168,85,247,0.4)] hover:scale-105 transition-transform duration-300" />
+                        <span className="text-2xl font-bold tracking-tight text-white">FutureForge</span>
+                    </div>
                     <h1 className="text-3xl font-bold bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent">
                         Start Learning
                     </h1>
