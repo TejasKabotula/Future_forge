@@ -139,29 +139,38 @@ class TranscriptService {
         const tempBase = path.resolve(__dirname, `temp_subs_${videoId}`);
 
         try {
-            console.log('[Transcript] Attempting yt-dlp subtitle fetch...');
+            console.log('[Transcript] Attempting yt-dlp subtitle fetch (no-ffmpeg mode)...');
 
             const ytDlpPath = this.getBinaryPath('yt-dlp');
-            const cmd = `"${ytDlpPath}" --write-sub --write-auto-sub --sub-lang "en,en-US,en-GB,en-orig" --skip-download --convert-subs srt --output "${tempBase}" "${url}"`;
+            // Remove --convert-subs srt to avoid ffmpeg requirement
+            const cmd = `"${ytDlpPath}" --write-sub --write-auto-sub --sub-lang "en,en-US,en-GB,en-orig" --skip-download --output "${tempBase}" "${url}"`;
 
             await this.execWithEnhancedPath(cmd);
 
             const dir = path.dirname(tempBase);
             const files = fs.readdirSync(dir);
-            const subFile = files.find(f => f.startsWith(`temp_subs_${videoId}`) && f.endsWith('.srt'));
+            // Look for .vtt or .srt
+            const subFile = files.find(f => f.startsWith(`temp_subs_${videoId}`) && (f.endsWith('.srt') || f.endsWith('.vtt')));
 
             if (!subFile) {
-                throw new Error('No subtitle file downloaded');
+                throw new Error('No subtitle file found after download attempt');
             }
 
-            const content = fs.readFileSync(path.join(dir, subFile), 'utf-8');
+            const subPath = path.join(dir, subFile);
+            const content = fs.readFileSync(subPath, 'utf-8');
+
+            const result = subFile.endsWith('.vtt') ? this.parseVtt(content) : this.parseSrt(content);
 
             // Cleanup immediately
             files.filter(f => f.startsWith(`temp_subs_${videoId}`)).forEach(f => {
                 try { fs.unlinkSync(path.join(dir, f)); } catch (e) { }
             });
 
-            return this.parseSrt(content);
+            if (!result || result.trim().length < 50) {
+                throw new Error('Parsed transcript is too short or empty');
+            }
+
+            return result;
 
         } catch (error) {
             // Cleanup on error
@@ -181,13 +190,43 @@ class TranscriptService {
         const textLines = [];
 
         for (const line of lines) {
-            if (/^\d+$/.test(line.trim())) continue;
-            if (line.includes('-->')) continue;
-            if (!line.trim()) continue;
-
             const cleanLine = line.trim();
+            if (/^\d+$/.test(cleanLine)) continue;
+            if (cleanLine.includes('-->')) continue;
+            if (!cleanLine) continue;
+            if (cleanLine.startsWith('<')) continue; // Remove HTML/XML tags
+
             if (textLines.length === 0 || textLines[textLines.length - 1] !== cleanLine) {
                 textLines.push(cleanLine);
+            }
+        }
+        return textLines.join(' ');
+    }
+
+    static parseVtt(vttContent) {
+        const lines = vttContent.split(/\r?\n/);
+        const textLines = [];
+
+        let isBody = false;
+        for (const line of lines) {
+            const cleanLine = line.trim();
+            if (cleanLine === 'WEBVTT') {
+                isBody = true;
+                continue;
+            }
+            if (!isBody) continue;
+
+            if (cleanLine.includes('-->')) continue;
+            if (/^\d+$/.test(cleanLine)) continue;
+            if (!cleanLine) continue;
+            if (cleanLine.startsWith('Kind:') || cleanLine.startsWith('Language:')) continue;
+
+            // Remove VTT tags like <c.color> or <00:00:00.000>
+            const textOnly = cleanLine.replace(/<[^>]+>/g, '');
+            if (!textOnly.trim()) continue;
+
+            if (textLines.length === 0 || textLines[textLines.length - 1] !== textOnly) {
+                textLines.push(textOnly);
             }
         }
         return textLines.join(' ');
@@ -200,29 +239,36 @@ class TranscriptService {
             console.log('[Transcript] Downloading audio with yt-dlp (m4a)...');
 
             const ytDlpPath = this.getBinaryPath('yt-dlp');
-            // Use a more flexible format selector: prefer m4a but fall back to any audio
-            const cmd = `"${ytDlpPath}" -f "bestaudio[ext=m4a]/bestaudio" -o "${tempPath}" "${url}"`;
+            // Use a more robust format selector and avoid large video files
+            // Try best audio, but limit to 50MB if possible (though Whisper limit is 25MB)
+            // We use -f "ba" which is usually a single stream M4A or OPUS
+            const cmd = `"${ytDlpPath}" -f "ba/ba*" -o "${tempPath}" "${url}"`;
 
             console.log(`[Transcript] Executing: ${cmd}`);
             await this.execWithEnhancedPath(cmd);
 
             if (!fs.existsSync(tempPath)) {
-                // Check if yt-dlp saved with a different extension
                 const dir = path.dirname(tempPath);
                 const files = fs.readdirSync(dir);
                 const audioFile = files.find(f => f.startsWith(`temp_${videoId}`) && !f.endsWith('.part'));
                 if (audioFile) {
                     const actualPath = path.join(dir, audioFile);
-                    console.log(`[Transcript] Audio saved as: ${actualPath}`);
-                    // Rename to expected path
                     fs.renameSync(actualPath, tempPath);
                 } else {
                     throw new Error('Audio file not created by yt-dlp');
                 }
             }
 
-            console.log('[Transcript] Audio downloaded, sending to Groq Whisper...');
+            // Check file size (Whisper limit is 25MB)
+            const stats = fs.statSync(tempPath);
+            const fileSizeMB = stats.size / (1024 * 1024);
+            console.log(`[Transcript] Audio file size: ${fileSizeMB.toFixed(2)} MB`);
 
+            if (fileSizeMB > 24.5) {
+                throw new Error(`Video audio is too large (${fileSizeMB.toFixed(2)} MB) for AI transcription. Max limit is 25MB. Please try a shorter video or use one with captions.`);
+            }
+
+            console.log('[Transcript] Sending to Groq Whisper...');
             const groq = getGroqClient();
             const transcription = await groq.audio.transcriptions.create({
                 file: fs.createReadStream(tempPath),

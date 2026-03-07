@@ -75,7 +75,7 @@ const AboutCreators = () => {
 
             <div className="mt-12 text-center">
                 <p className="text-zinc-500 text-sm">
-                    Built with <span className="text-red-500 animate-pulse">❤</span> by the FutureForge Team
+                    Built with <span className="text-red-500 animate-pulse">❤</span> by the LearnTrackYT Team
                 </p>
             </div>
         </div>

@@ -1,9 +1,9 @@
-# FutureForge - Automated Setup Script
+# LearnTrackYT - Automated Setup Script
 # This script installs project dependencies, Deno, and downloads yt-dlp.exe
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "--- FutureForge Setup Started ---" -ForegroundColor Cyan
+Write-Host "--- LearnTrackYT Setup Started ---" -ForegroundColor Cyan
 
 # 1. Check for Node.js
 Write-Host "[1/6] Checking Node.js installation..."
@@ -16,7 +16,7 @@ Write-Host "Done." -ForegroundColor Green
 Write-Host "[2/6] Checking Deno installation..."
 if (!(Get-Command deno -ErrorAction SilentlyContinue)) {
     Write-Host "Deno not found. Installing Deno..." -ForegroundColor Yellow
-    Invoke-RestMethod https://deno.land/install.ps1 | Invoke-Expression
+    irm https://deno.land/install.ps1 | iex
     Write-Host "Deno installed. You may need to restart your terminal later." -ForegroundColor Cyan
 }
 else {

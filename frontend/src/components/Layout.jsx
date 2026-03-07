@@ -32,7 +32,7 @@ const Layout = ({ children }) => {
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center font-bold text-lg text-white">
                         L
                     </div>
-                    <span className="font-bold text-xl tracking-tight hidden md:block">FutureForge</span>
+                    <span className="font-bold text-xl tracking-tight hidden md:block">LearnTrackYT</span>
                 </div>
 
                 {/* Desktop Nav Links */}

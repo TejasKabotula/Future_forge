@@ -1,6 +1,6 @@
 @echo off
 echo ==========================================
-echo    FutureForge - Quick Setup (Windows)
+echo    LearnTrackYT - Quick Setup (Windows)
 echo ==========================================
 echo.
 
